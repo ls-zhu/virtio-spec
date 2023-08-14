@@ -325,6 +325,10 @@ struct virtio_pci_common_cfg {
         /* About the administration virtqueue. */
         le16 admin_queue_index;         /* read-only for driver */
         le16 admin_queue_num;         /* read-only for driver */
+
+	/* Virtqueue state */
+        le16 queue_avail_state;         /* read-write */
+        le16 queue_used_state;          /* read-write */
 };
 \end{lstlisting}
 
@@ -428,6 +432,17 @@ struct virtio_pci_common_cfg {
 	The value 0 indicates no supported administration virtqueues.
 	This field is valid only if VIRTIO_F_ADMIN_VQ has been
 	negotiated.
+
+\item[\field{queue_avail_state}]
+        This field is valid only if VIRTIO_F_QUEUE_STATE has been
+        negotiated. The driver sets and gets the available state of
+        the virtqueue here (see \ref{sec:Virtqueues / Virtqueue State}).
+
+\item[\field{queue_used_state}]
+        This field is valid only if VIRTIO_F_QUEUE_STATE has been
+        negotiated. The driver sets and gets the used state of the
+        virtqueue here (see \ref{sec:Virtqueues / Virtqueue State}).
+
 \end{description}
 
 \devicenormative{\paragraph}{Common configuration structure layout}{Virtio Transport Options / Virtio Over PCI Bus / PCI Device Layout / Common configuration structure layout}
@@ -487,6 +502,9 @@ corresponding to the current \field{queue_select} is unavailable.
 If VIRTIO_F_RING_PACKED has not been negotiated, the device MUST
 present either a value of 0 or a power of 2 in
 \field{queue_size}.
+
+If VIRTIO_F_QUEUE_STATE has not been negotiated, the device MUST ignore
+any accesses to \field{queue_avail_state} and \field{queue_used_state}.
 
 If VIRTIO_F_ADMIN_VQ has been negotiated, the value
 \field{admin_queue_index} MUST be equal to, or bigger than
