@@ -49,6 +49,10 @@ they would be typically set):
 
 \item[DEVICE_NEEDS_RESET (64)] Indicates that the device has experienced
   an error from which it can't recover.
+
+\item[SUSPEND (16)] When VIRTIO_F_SUSPEND is negotiated, indicates that the
+  device has been suspended by the driver.
+
 \end{description}
 
 The \field{device status} field starts out as 0, and is reinitialized to 0 by
@@ -73,6 +77,12 @@ they have not been completed.  A good implementation will try to
 recover by issuing a reset.
 \end{note}
 
+The driver SHOULD NOT set SUSPEND if FEATURES_OK is not set.
+
+The driver SHOULD NOT set SUSPEND if DRIVER_OK is not set.
+
+When setting SUSPEND, the driver MUST re-read \field{device status} to ensure the SUSPEND bit is set.
+
 \devicenormative{\subsection}{Device Status Field}{Basic Facilities of a Virtio Device / Device Status Field}
 
 The device MUST NOT consume buffers or send any used buffer
@@ -81,6 +91,27 @@ notifications to the driver before DRIVER_OK.
 \label{sec:Basic Facilities of a Virtio Device / Device Status Field / DEVICENEEDSRESET}The device SHOULD set DEVICE_NEEDS_RESET when it enters an error state
 that a reset is needed.  If DRIVER_OK is set, after it sets DEVICE_NEEDS_RESET, the device
 MUST send a device configuration change notification to the driver.
+
+The device MUST ignore SUSPEND if FEATURES_OK is not set.
+
+The device MUST ignore SUSPEND if VIRTIO_F_SUSPEND is not negotiated.
+
+The device SHOULD allow settings to \field{device status} even when SUSPEND is set.
+
+If VIRTIO_F_SUSPEND is negotiated and SUSPEND is set, the device SHOULD clear SUSPEND
+and resumes operation upon DRIVER_OK.
+
+If VIRTIO_F_SUSPEND is negotiated, when the driver sets SUSPEND,
+the device SHOULD perform the following actions before presenting SUSPEND bit in the \field{device status}:
+
+\begin{itemize}
+\item Stop consuming buffers of any virtqueues and mark all finished descriptors as used.
+\item Wait until all buffers that are being processed to finish and mark them as used.
+\item Flush all used buffer and send used buffer notifications to the driver.
+\item Record Virtqueue State of each enabled virtqueue, see section \ref{sec:Basic Facilities of a Virtio Device / Splited Virtqueues / Virtqueue State}
+and \ref{sec:Basic Facilities of a Virtio Device / Packed Virtqueues / Virtqueue State}.
+\item Pause its operation except \field{device status} and preserve configurations in its Device Configuration Space, see \ref{sec:Basic Facilities of a Virtio Device / Device Configuration Space}
+\end{itemize}
 
 \section{Feature Bits}\label{sec:Basic Facilities of a Virtio Device / Feature Bits}
 
@@ -99,10 +130,10 @@ Feature bits are allocated as follows:
 \begin{description}
 \item[0 to 23, and 50 to 127] Feature bits for the specific device type
 
-\item[24 to 42] Feature bits reserved for extensions to the queue and
+\item[24 to 43] Feature bits reserved for extensions to the queue and
   feature negotiation mechanisms
 
-\item[43 to 49, and 128 and above] Feature bits reserved for future extensions.
+\item[44 to 49, and 128 and above] Feature bits reserved for future extensions.
 \end{description}
 
 \begin{note}
@@ -874,6 +905,10 @@ Descriptors} and \ref{sec:Packed Virtqueues / Indirect Flag: Scatter-Gather Supp
 
   \item[VIRTIO_F_QUEUE_STATE(42)] This feature indicates that the device allows the driver
   to access its internal virtqueue state.
+
+  \item[VIRTIO_F_SUSPEND(43)] This feature indicates that the driver can
+   suspend the device.
+   See \ref{sec:Basic Facilities of a Virtio Device / Device Status Field}.
 
 \end{description}
 
