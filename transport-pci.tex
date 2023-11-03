@@ -188,6 +188,8 @@ The fields are interpreted as follows:
 #define VIRTIO_PCI_CAP_SHARED_MEMORY_CFG 8
 /* Vendor-specific data */
 #define VIRTIO_PCI_CAP_VENDOR_CFG        9
+/* Memory Dirty Pages Tracker*/
+#define VIRTIO_PCI_CAP_MEMORY_TRACK_CFG  10
 \end{lstlisting}
 
         Any other value is reserved for future use.
@@ -1230,3 +1232,73 @@ The driver interrupt handler would typically:
         re-examine the configuration space to see what changed.
     \end{itemize}
 \end{itemize}
+
+\subsection{Memory Dirty Pages Tracker Capability}\label{sec:Virtio
+Transport Options / Virtio Over PCI Bus / PCI Device Layout /
+Memory Dirty Pages Tracker Capability}
+
+The Memory Dirty Pages Tracker facility is found at \field{bar} and \field{offset} in VIRTIO_PCI_CAP_MEMORY_TRACK_CFG capability.
+Its layout is shown below:
+
+\begin{lstlisting}
+struct virtio_pci_dity_page_track {
+        u8 enable;               /* Read-Write */
+        u8 gra_power;            /* Read-Write */
+        u8 reserved[2];
+        le32 {
+            pasid: 20;           /* Read-Write */
+            reserved: 12;
+        };
+        le64 bitmap_addr;        /* Read-Write */
+        le64 bitmap_length;      /* Read-Write */
+};
+\end{lstlisting}
+
+\begin{description}
+\item[\field{enable}]
+	The driver writes 1 to enable dirty pages tracking and sets 0 to disable.
+\item[\field{gra_power}]
+	The driver uses this to set the dirty pages tracking granularity.
+	Each bit in the bitmap covers page_size = 2\^{}(12 + gra_power) bytes,
+	so when gra_power == 0, 4K bytes page is default.
+\item[\field{pasid}]
+	Optionally, the driver uses this to assign a pasid to this capability.
+\item[\field{bitmap_addr}]
+	The driver use this to set the address of the bitmap which records the dirty pages
+	caused by the device.
+	Each bit in the bitmap represents one memory page, bit 0 in the bitmap
+	reprsents page 0 at address 0, bit 1 represents page 1, and so on in a linear manner.
+	When \field{enable} is set to 1 and the device writes to a memory page,
+	the device MUST set the corresponding bit to 1 which indicating the page is dirty.
+\item[\field{bitmap_length}]
+	The driver use this to set the length in bytes of the bitmap.
+\end{description}
+
+\devicenormative{\subsubsection}{Memory Dirty Pages Tracker Capability}{Virtio Transport Options / Virtio Over PCI Bus / Memory Dirty Pages Tracker Capability}
+
+The device MUST NOT set any bits beyond bitmap_length when reporting dirty pages.
+
+To prevent a read-modify-write procedure, if a memory page is dirty,
+optionally the device is permitted to set the entire byte, which encompasses the relevant bit, to 1.
+
+The device MAY increase \field{gra_power} to reduce \field{bitmap_length}.
+
+The device must ignore any writes to \field{pasid} if PASID Extended Capability is absent or
+the PASID functionality is disabled in PASID Extended Capability
+
+The bitmap which starts at \field{bitmap_addr} SHOULD not be considered
+as dirty when the device write to it.
+
+On a reset, the device MUST reset \field{pasid} and \field{enable}, and stop
+tracking dirty pages.
+
+\drivernormative{\subsubsection}{Memory Dirty Pages Tracker Capability}{Virtio Transport Options / Virtio Over PCI Bus / Memory Dirty Pages Tracker Capability}
+
+The driver is responsible to allocate the bitmap for tracking device dirty pages.
+
+Upon retrieving a cluster of bits from the bitmap, the driver MUST clear each of them by setting 0.
+
+The driver MUST configure \field{pasid} if PASID is enabled in PASID Extended Capability.
+
+The driver SHOULD NOT access \field{pasid} if PASID Extended Capability is absent or
+the PASID functionality is disabled in PASID Extended Capability.
