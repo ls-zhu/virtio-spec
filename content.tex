@@ -447,6 +447,9 @@ any requests from that virtqueue, or notify the driver for it.
 The device MUST reset any state of a virtqueue to the default state,
 including the available state and the used state.
 
+If VIRTIO_F_SUSPEND is negotiated and SUSPEND is set in \field{device status},
+the driver SHOULD NOT reset any virtqueues.
+
 \drivernormative{\paragraph}{Virtqueue Reset}{Basic Facilities of a Virtio Device / Virtqueues / Virtqueue Reset / Virtqueue Reset}
 
 After the driver tells the device to reset a queue, the driver MUST verify that
