@@ -130,10 +130,10 @@ Feature bits are allocated as follows:
 \begin{description}
 \item[0 to 23, and 50 to 127] Feature bits for the specific device type
 
-\item[24 to 43] Feature bits reserved for extensions to the queue and
+\item[24 to 44] Feature bits reserved for extensions to the queue and
   feature negotiation mechanisms
 
-\item[44 to 49, and 128 and above] Feature bits reserved for future extensions.
+\item[45 to 49, and 128 and above] Feature bits reserved for future extensions.
 \end{description}
 
 \begin{note}
@@ -538,6 +538,27 @@ UUIDs as specified by \hyperref[intro:rfc4122]{[RFC4122]}.
 
 \input{admin.tex}
 
+\section{Memory Dirty Pages Tracker}\label{sec:Basic Facilities of a Virtio Device / Memory Dirty Pages Tracker}
+
+A "dirty page" refers to a page in memory that has been modified by the device
+but have not yet been acknowledged or processed by the CPU.
+
+This Memory Dirty Pages Tracker is a device facility that can record and report
+dirty pages caused by the device in device address space.
+
+The device offers a feature bit VIRTIO_F_MEM_TRACK if capable of tracking dirty pages.
+The implementation of this dirty page tracking facility is transport specific.
+
+A typical use case of this facility is to track dirty pages during live migration process.
+
+\drivernormative{\subsection}{Memory Dirty Pages Tracker}{Facilities of a Virtio Device / Memory Dirty Pages Tracker}
+
+The driver MUST fetch and clear dirty page information atomically.
+
+\devicenormative{\subsection}{Memory Dirty Pages Tracker}{Facilities of a Virtio Device / Memory Dirty Pages Tracker}
+
+The device MUST report the dirty page information atomically.
+
 \chapter{General Initialization And Device Operation}\label{sec:General Initialization And Device Operation}
 
 We start with an overview of device initialization, then expand on the
@@ -912,6 +933,9 @@ Descriptors} and \ref{sec:Packed Virtqueues / Indirect Flag: Scatter-Gather Supp
   \item[VIRTIO_F_SUSPEND(43)] This feature indicates that the driver can
    suspend the device.
    See \ref{sec:Basic Facilities of a Virtio Device / Device Status Field}.
+
+  \item[VIRTIO_F_MEM_TRACK(44)] This feature indicates that the device can track
+  memory dirty pages caused by itself.
 
 \end{description}
 
